@@ -636,5 +636,43 @@ class TestCurrencyContract(unittest.TestCase):
                 stream_id=stream_id,
                 signer=other_user
             )
+
+    def test_close_balance_finalize(self):
+        # GIVEN a stream setup
+        sender = 'alice'
+        self.currency.balances[sender] = 100000000000000
+        receiver = 'bob'
+        rate = 10.0
+        begins = self.create_date(2023, 1, 1)
+        closes = self.create_date(2023, 12, 31)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        
+        # WHEN close_balance_finalize is called by the sender
+        self.currency.close_balance_finalize(stream_id=stream_id, signer=sender, environment={"now": closes})
+        
+        # THEN the stream should be closed, balanced, and finalized
+        stream_status = self.currency.streams[stream_id, 'status']
+        self.assertEqual(stream_status, 'finalized')
+        self.assertEqual(self.currency.streams[stream_id, 'closes'], closes)
+        self.assertEqual(self.currency.balances[receiver], (closes - begins).seconds * rate)
+
+    def test_balance_finalize(self):
+        # GIVEN a stream setup
+        sender = 'alice'
+        self.currency.balances[sender] = 100000000000000
+        receiver = 'bob'
+        rate = 1
+        begins = self.create_date(2023, 1, 1)
+        closes = self.create_date(2023, 12, 31)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        
+        # WHEN balance_finalize is called by the receiver
+        self.currency.balance_finalize(stream_id=stream_id, signer=receiver, environment={"now": closes})
+        
+        # THEN the stream should be balanced and finalized
+        stream_status = self.currency.streams[stream_id, 'status']
+        self.assertEqual(stream_status, 'finalized')
+        self.assertEqual(self.currency.balances[receiver], (closes - begins).seconds * rate)
+
 if __name__ == "__main__":
     unittest.main()

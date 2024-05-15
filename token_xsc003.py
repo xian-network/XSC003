@@ -225,6 +225,22 @@ def finalize_stream(stream_id: str):
     return f"Finalized stream {stream_id}"
 
 
+# Convenience method to close a stream, balance it and finalize it
+# Called by `sender`
+@export
+def close_balance_finalize(stream_id: str):
+    change_close_time(stream_id=stream_id, new_close_time=now)
+    balance_finalize(stream_id=stream_id)
+
+
+# Convenience method to balance a stream and finalize it
+# Called by `receiver` or `sender`
+@export
+def balance_finalize(stream_id: str):
+    balance_stream(stream_id=stream_id)
+    finalize_stream(stream_id=stream_id)
+
+
 # Forfeit a stream to the sender
 # Called by `receiver`
 @export
