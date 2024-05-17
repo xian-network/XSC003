@@ -40,23 +40,24 @@ This method performs the following operations to establish a new payment stream:
 This method simplifies the process of initiating a payment stream, making it accessible for users to set up scheduled payments to other parties within the smart contract environment.
 
 ### Method : create_stream_from_permit
-`create_stream_from_permit(sender: str, receiver: str, rate: float, begins: dict, closes: dict, signature: str)`
+`create_stream_from_permit(sender: str, receiver: str, rate: float, begins: dict, closes: dict, deadline: str, signature: str)`
 
 #### Overview
 The create_stream_from_permit method enables the creation of a payment stream based on a cryptographic permit, which includes a signature that must be verified before the stream can be established. This method allows for secure and verified transactions, ensuring that the stream is initiated based on pre-approved permissions.
 #### Functionality
 This method performs the following operations to establish a new payment stream using a cryptographic permit:
-1. Permit Message Construction: 
+1. Checks the the deadline has not passed. 
+2. Permit Message Construction: 
     - Constructs a permit message using the sender, receiver, rate, and the specified time window (begins and closes). This message is then hashed to create a unique identifier for the permit.
-2. Permit Verification:
+3. Permit Verification:
     - Uniqueness Check: Ensures that the permit has not been used before by checking the hashed permit message against a record of used permits.
-3. Signature Verification: 
-    -  Validates the signature using cryptographic methods to ensure that it was indeed signed by the sender, confirming their intent to create the stream.
-3. Permit Registration: 
+4. Signature Verification: 
+    - Validates the signature using cryptographic methods to ensure that it was indeed signed by the sender, confirming their intent to create the stream.
+5. Permit Registration: 
     - Marks the permit as used in the system to prevent reuse, ensuring the integrity of the permit system.
-4. Stream Creation: 
+6. Stream Creation: 
     - Calls perform_create_stream to handle the actual creation of the stream using the validated parameters. This internal function ensures that the stream is set up correctly with all necessary validations.
-5. Return Value: 
+7. Return Value: 
     - Returns the unique stream ID generated during the stream creation process, providing a reference to the newly established stream.
 
 ### Method : balance_stream
