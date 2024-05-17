@@ -435,10 +435,11 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
         deadline = Datetime(year=2023, month=1, day=11)
+        env = {"now": Datetime(year=2023, month=1, day=3, hour=0)}
         signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))
 
         # WHEN
-        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, signature=signature)
+        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature, environment=env)
 
         # THEN
         self.assertIsNotNone(stream_id)
@@ -459,9 +460,10 @@ class TestCurrencyContract(unittest.TestCase):
         closes = Datetime(year=2023, month=1, day=10)
         deadline = Datetime(year=2023, month=1, day=11)
         signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))
-
+        now = Datetime(year=2023, month=1, day=9)
+        env = {"now": now}
         # WHEN
-        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, signature=signature)
+        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature, environment=env)
 
         # THEN
         with self.assertRaises(Exception):
@@ -478,11 +480,12 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
         deadline = Datetime(year=2023, month=1, day=11)
+        env = {"now": Datetime(year=2023, month=1, day=12)}
         signature = f"{wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))}:invalid"
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature)
 
     def test_create_stream_invalid_permit_wrong_sender(self):
         # GIVEN
