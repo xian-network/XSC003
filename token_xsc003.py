@@ -125,8 +125,9 @@ def perform_create_stream(sender: str, receiver: str, rate: float, begins: dict,
 # Creates a payment stream from a valid signature of a permit message
 # Wrapper for perform_create_stream
 @export
-def create_stream_from_permit(sender: str, receiver: str, rate: float, begins: dict, closes: dict, signature: str):
-    permit_msg = construct_stream_permit_msg(sender, receiver, rate, begins, closes)
+def create_stream_from_permit(sender: str, receiver: str, rate: float, begins: dict, closes: dict, deadline: dict, signature: str):
+    assert now < deadline, 'Permit has expired.'
+    permit_msg = construct_stream_permit_msg(sender, receiver, rate, begins, closes, deadline)
     permit_hash = hashlib.sha3(permit_msg)
 
     assert permits[permit_hash] is None, 'Permit can only be used once.'
@@ -270,6 +271,6 @@ def calc_claimable_amount(amount_due: float, sender:str):
     return amount_due if amount_due < balances[sender] else balances[sender]
 
 
-def construct_stream_permit_msg(sender:str, receiver:str, rate:float, begins:dict, closes:dict):
-    return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{ctx.this}"
+def construct_stream_permit_msg(sender:str, receiver:str, rate:float, begins:dict, closes:dict, deadline:dict):
+    return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{deadline}:{ctx.this}"
 
