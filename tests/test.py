@@ -20,6 +20,17 @@ class TestCurrencyContract(unittest.TestCase):
         # Called after every test, ensures each test starts with a clean slate and is isolated from others
         self.client.flush()
 
+    def test_balance_of(self):
+        # GIVEN
+        receiver = 'receiver_account'
+        self.currency.balances[receiver] = 100000000000000
+
+        # WHEN
+        balance = self.currency.balance_of(address=receiver, signer="sys")
+
+        # THEN
+        self.assertEqual(balance, 100000000000000)
+
     def test_initial_balance(self):
         # GIVEN the initial setup
         # WHEN checking the initial balance
@@ -102,7 +113,7 @@ class TestCurrencyContract(unittest.TestCase):
         private_key = 'ed30796abc4ab47a97bfb37359f50a9c362c7b304a4b4ad1b3f5369ecb6f7fd8'
         wallet = Wallet(private_key)
         public_key = wallet.public_key
-        deadline = self.create_deadline()
+        deadline = str(self.create_deadline())
         spender = "some_spender"
         value = 100
         msg = self.construct_permit_msg(public_key, spender, value, deadline)
@@ -125,7 +136,7 @@ class TestCurrencyContract(unittest.TestCase):
         # WHEN the permit is attempted
         # THEN it should fail due to expiration
         with self.assertRaises(Exception) as context:
-            self.currency.permit(owner=public_key, spender=spender, value=value, deadline=deadline, signature=signature)
+            self.currency.permit(owner=public_key, spender=spender, value=value, deadline=str(deadline), signature=signature)
         self.assertIn('Permit has expired', str(context.exception))
 
     def test_permit_invalid_signature(self):
@@ -141,7 +152,7 @@ class TestCurrencyContract(unittest.TestCase):
         # WHEN the permit is attempted
         # THEN it should fail due to invalid signature
         with self.assertRaises(Exception) as context:
-            self.currency.permit(owner=public_key, spender=spender, value=value, deadline=deadline, signature=signature)
+            self.currency.permit(owner=public_key, spender=spender, value=value, deadline=str(deadline), signature=signature)
         self.assertIn('Invalid signature', str(context.exception))
 
     def test_permit_double_spending(self):
@@ -154,11 +165,11 @@ class TestCurrencyContract(unittest.TestCase):
         value = 100
         msg = self.construct_permit_msg(public_key, spender, value, deadline)
         signature = wallet.sign_msg(msg)
-        self.currency.permit(owner=public_key, spender=spender, value=value, deadline=deadline, signature=signature)
+        self.currency.permit(owner=public_key, spender=spender, value=value, deadline=str(deadline), signature=signature)
         # WHEN the permit is used again
         # THEN it should fail due to double spending
         with self.assertRaises(Exception) as context:
-            self.currency.permit(owner=public_key, spender=spender, value=value, deadline=deadline, signature=signature)
+            self.currency.permit(owner=public_key, spender=spender, value=value, deadline=str(deadline), signature=signature)
         self.assertIn('Permit can only be used once', str(context.exception))
 
     # XST003 / Streaming Payments
@@ -183,7 +194,7 @@ class TestCurrencyContract(unittest.TestCase):
         
         self.client.signer = sender
         # WHEN the stream is created
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
         # THEN the stream should be active and have correct properties
         self.assertEqual(self.currency.streams[stream_id, 'status'], 'active')
         self.assertEqual(self.currency.streams[stream_id, 'begins'], begins)
@@ -205,7 +216,7 @@ class TestCurrencyContract(unittest.TestCase):
         # WHEN the stream is attempted to be created
         # THEN it should fail due to invalid date ranges
         with self.assertRaises(Exception):
-            self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes)
+            self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes))
 
     def test_create_stream_negative_rate(self):
         # GIVEN a stream creation setup with a negative rate
@@ -218,7 +229,7 @@ class TestCurrencyContract(unittest.TestCase):
         # WHEN the stream is attempted to be created
         # THEN it should fail due to negative rate
         with self.assertRaises(Exception):
-            self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+            self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
     def test_sender_can_balance_stream(self):
         # GIVEN a stream setup where the sender can balance the stream
@@ -231,7 +242,7 @@ class TestCurrencyContract(unittest.TestCase):
         self.currency.balances[receiver] = 0
         rate = 1
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the stream is balanced by the sender
         balance_res = self.currency.balance_stream(stream_id=stream_id, signer=sender, environment={"now": closes})
@@ -252,7 +263,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         rate = 1
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the stream is balanced by the receiver
         balance_res = self.currency.balance_stream(stream_id=stream_id, signer=receiver, environment={"now": closes})
@@ -271,7 +282,7 @@ class TestCurrencyContract(unittest.TestCase):
         env = {"now": begins}
 
         self.client.signer = sender
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the stream is attempted to be balanced after it closes
         # THEN it should fail due to no amount being due
@@ -290,7 +301,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         rate = 1
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the stream is balanced by the receiver
         balance_res = self.currency.balance_stream(stream_id=stream_id, signer=receiver, environment={"now": closes})
@@ -311,7 +322,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         rate = 1
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         balance_res = self.currency.balance_stream(stream_id=stream_id, signer=receiver, environment={"now": closes})
         # WHEN the stream is finalized by the receiver
@@ -333,7 +344,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         rate = 1
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         balance_res = self.currency.balance_stream(stream_id=stream_id, signer=receiver, environment={"now": closes})
         # WHEN the stream is finalized by the sender
@@ -355,7 +366,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         rate = 1
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the stream is attempted to be finalized
         # THEN it should fail due to the outstanding balance
@@ -376,10 +387,10 @@ class TestCurrencyContract(unittest.TestCase):
         env = {"now": Datetime(year=2023, month=1, day=3, hour=0)}
 
         self.client.signer = sender
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the close time is changed
-        result = self.currency.change_close_time(stream_id=stream_id, new_close_time=new_close_time, environment=env, signer=sender)
+        result = self.currency.change_close_time(stream_id=stream_id, new_close_time=str(new_close_time), environment=env, signer=sender)
         # THEN the close time should be updated correctly
         self.assertIn("Changed close time of stream to", result)
 
@@ -398,10 +409,10 @@ class TestCurrencyContract(unittest.TestCase):
         env = {"now": now}
 
         self.client.signer = sender
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the close time is changed to a time before now
-        self.currency.change_close_time(stream_id=stream_id, new_close_time=new_close_time, environment=env, signer=sender)
+        self.currency.change_close_time(stream_id=stream_id, new_close_time=str(new_close_time), environment=env, signer=sender)
         # THEN the close time should be set to now
         assert self.currency.streams[stream_id, 'closes'] == now
 
@@ -417,10 +428,10 @@ class TestCurrencyContract(unittest.TestCase):
         env = {"now": Datetime(year=2021, month=1, day=3, hour=0)}
 
         self.client.signer = sender
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN the close time is changed to a time before it begins
-        self.currency.change_close_time(stream_id=stream_id, new_close_time=new_close_time, environment=env, signer=sender)
+        self.currency.change_close_time(stream_id=stream_id, new_close_time=str(new_close_time), environment=env, signer=sender)
         # THEN the close time should be set to the begin time
         assert self.currency.streams[stream_id, 'closes'] == begins
 
@@ -439,7 +450,7 @@ class TestCurrencyContract(unittest.TestCase):
         signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))
 
         # WHEN
-        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature, environment=env)
+        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), deadline=str(deadline), signature=signature, environment=env)
 
         # THEN
         self.assertIsNotNone(stream_id)
@@ -459,15 +470,15 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
         deadline = Datetime(year=2023, month=1, day=11)
-        signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))
+        signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, str(begins), str(closes), str(deadline)))
         now = Datetime(year=2023, month=1, day=9)
         env = {"now": now}
         # WHEN
-        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature, environment=env)
+        stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), deadline=str(deadline), signature=signature, environment=env)
 
         # THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signature=signature)
 
     def test_create_stream_invalid_permit(self):
         # GIVEN
@@ -485,7 +496,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), deadline=str(deadline), signature=signature)
 
     def test_create_stream_invalid_permit_wrong_sender(self):
         # GIVEN
@@ -502,7 +513,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender="wrong_sender", receiver=receiver, rate=rate, begins=begins, closes=closes, signature=signature)
+            self.currency.create_stream_from_permit(sender="wrong_sender", receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signature=signature)
 
     def test_create_stream_invalid_permit_wrong_receiver(self):
         # GIVEN
@@ -519,7 +530,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver="wrong_receiver", rate=rate, begins=begins, closes=closes, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver="wrong_receiver", rate=rate, begins=str(begins), closes=str(closes), signature=signature)
 
     def test_create_stream_invalid_permit_wrong_rate(self):
         # GIVEN
@@ -532,11 +543,11 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
         deadline = Datetime(year=2023, month=1, day=11)
-        signature = f"{wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))}"
+        signature = f"{wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, str(begins), str(closes), str(deadline)))}"
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=10, begins=begins, closes=closes, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=10, begins=str(begins), closes=str(closes), signature=signature)
 
     def test_create_stream_invalid_permit_wrong_begin_date(self):
         # GIVEN
@@ -554,7 +565,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=wrong_date, closes=closes, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(wrong_date), closes=str(closes), signature=signature)
 
     def test_create_stream_invalid_permit_wrong_closes_date(self):
         # GIVEN
@@ -572,7 +583,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=wrong_date, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(wrong_date), signature=signature)
 
 
     def test_create_stream_invalid_permit_expired_deadline(self):
@@ -590,7 +601,7 @@ class TestCurrencyContract(unittest.TestCase):
 
         # WHEN / THEN
         with self.assertRaises(Exception):
-            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=begins, closes=closes, deadline=deadline, signature=signature)
+            self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), deadline=str(deadline), signature=signature)
 
     def test_forfeit_stream_success(self):
         # GIVEN
@@ -600,7 +611,7 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # WHEN
         result = self.currency.forfeit_stream(
@@ -634,7 +645,7 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
 
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
         self.currency.streams[stream_id, 'status'] = 'finalized'
 
         # WHEN / THEN
@@ -657,7 +668,7 @@ class TestCurrencyContract(unittest.TestCase):
         other_user = 'other_user'
 
         # WHEN
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
 
         # THEN
         with self.assertRaises(AssertionError):
@@ -674,7 +685,7 @@ class TestCurrencyContract(unittest.TestCase):
         rate = 10.0
         begins = self.create_date(2023, 1, 1)
         closes = self.create_date(2023, 12, 31)
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
         
         # WHEN close_balance_finalize is called by the sender
         self.currency.close_balance_finalize(stream_id=stream_id, signer=sender, environment={"now": closes})
@@ -693,12 +704,12 @@ class TestCurrencyContract(unittest.TestCase):
         rate = 1
         begins = self.create_date(2023, 1, 1)
         closes = self.create_date(2023, 12, 31)
-        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=begins, closes=closes, signer=sender)
-        
-        # WHEN balance_finalize is called by the receiver
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
+
+        # # WHEN balance_finalize is called by the receiver
         self.currency.balance_finalize(stream_id=stream_id, signer=receiver, environment={"now": closes})
         
-        # THEN the stream should be balanced and finalized
+        # # THEN the stream should be balanced and finalized
         stream_status = self.currency.streams[stream_id, 'status']
         self.assertEqual(stream_status, 'finalized')
         self.assertEqual(self.currency.balances[receiver], (closes - begins).seconds * rate)

@@ -56,11 +56,18 @@ def transfer_from(amount: float, to: str, main_account: str):
 
     return f"Sent {amount} to {to} from {main_account}"
 
+
+@export
+def balance_of(address: str):
+    return balances[address]
+
+
 # XST002 / Permit
 
 @export
-def permit(owner: str, spender: str, value: float, deadline: dict, signature: str):
-    permit_msg = construct_permit_msg(owner, spender, value, deadline)
+def permit(owner: str, spender: str, value: float, deadline: str, signature: str):
+    deadline = strptime_ymdhms(deadline)
+    permit_msg = construct_permit_msg(owner, spender, value, str(deadline))
     permit_hash = hashlib.sha3(permit_msg)
 
     assert permits[permit_hash] is None, 'Permit can only be used once.'
@@ -73,7 +80,7 @@ def permit(owner: str, spender: str, value: float, deadline: dict, signature: st
     return f"Permit granted for {value} to {spender} from {owner}"
 
 
-def construct_permit_msg(owner: str, spender: str, value: float, deadline: dict):
+def construct_permit_msg(owner: str, spender: str, value: float, deadline: str):
     return f"{owner}:{spender}:{value}:{deadline}:{ctx.this}"
 
 
@@ -96,7 +103,9 @@ STREAM_FORFEIT = "forfeit"
 # Stream can begin at any point in past / present / future
 # Wrapper for perform_create_stream
 @export
-def create_stream(receiver: str, rate: float, begins: dict, closes: dict):
+def create_stream(receiver: str, rate: float, begins: str, closes: str):
+    begins = strptime_ymdhms(begins)
+    closes = strptime_ymdhms(closes)
     sender = ctx.caller
 
     stream_id = perform_create_stream(sender, receiver, rate, begins, closes)
@@ -104,7 +113,7 @@ def create_stream(receiver: str, rate: float, begins: dict, closes: dict):
 
 
 # Internal function used to create a stream from a permit or from a direct call from the sender
-def perform_create_stream(sender: str, receiver: str, rate: float, begins: dict, closes: dict):
+def perform_create_stream(sender: str, receiver: str, rate: float, begins: str, closes: str):
     stream_id = hashlib.sha3(f"{sender}:{receiver}:{begins}:{closes}:{rate}")
 
     assert streams[stream_id, STATUS_KEY] is None, 'Stream already exists.'
@@ -125,7 +134,11 @@ def perform_create_stream(sender: str, receiver: str, rate: float, begins: dict,
 # Creates a payment stream from a valid signature of a permit message
 # Wrapper for perform_create_stream
 @export
-def create_stream_from_permit(sender: str, receiver: str, rate: float, begins: dict, closes: dict, deadline: dict, signature: str):
+def create_stream_from_permit(sender: str, receiver: str, rate: float, begins: str, closes: str, deadline: str, signature: str):
+    begins = strptime_ymdhms(begins)
+    closes = strptime_ymdhms(closes)
+    deadline = strptime_ymdhms(deadline)
+
     assert now < deadline, 'Permit has expired.'
     permit_msg = construct_stream_permit_msg(sender, receiver, rate, begins, closes, deadline)
     permit_hash = hashlib.sha3(permit_msg)
@@ -177,7 +190,9 @@ def balance_stream(stream_id: str):
 # If the new close time < begins, the stream is closed at begin time <invalidated>
 # Called by `sender`
 @export
-def change_close_time(stream_id: str, new_close_time: dict):
+def change_close_time(stream_id: str, new_close_time: str):
+    new_close_time = strptime_ymdhms(new_close_time)
+
     assert streams[stream_id, STATUS_KEY], 'Stream does not exist.'
     assert streams[stream_id, STATUS_KEY] == STREAM_ACTIVE, 'Stream is not active.'
 
@@ -230,7 +245,7 @@ def finalize_stream(stream_id: str):
 # Called by `sender`
 @export
 def close_balance_finalize(stream_id: str):
-    change_close_time(stream_id=stream_id, new_close_time=now)
+    change_close_time(stream_id=stream_id, new_close_time=str(now))
     balance_finalize(stream_id=stream_id)
 
 
@@ -241,11 +256,10 @@ def balance_finalize(stream_id: str):
     balance_stream(stream_id=stream_id)
     finalize_stream(stream_id=stream_id)
 
-
 # Forfeit a stream to the sender
 # Called by `receiver`
 @export
-def forfeit_stream(stream_id: str):
+def forfeit_stream(stream_id: str) -> str:
     assert streams[stream_id, STATUS_KEY], 'Stream does not exist.'
     assert streams[stream_id, STATUS_KEY] == STREAM_ACTIVE, 'Stream is not active.'
 
@@ -259,7 +273,10 @@ def forfeit_stream(stream_id: str):
     return f"Forfeit stream {stream_id}"
 
 
-def calc_outstanding_balance(begins: dict, closes: dict, rate: float, claimed: float):
+def calc_outstanding_balance(begins: str, closes: str, rate: float, claimed: float) -> float:
+    begins = begins
+    closes = closes
+
     claimable_end_point = now if now < closes else closes
     claimable_period = claimable_end_point - begins
     claimable_seconds = claimable_period.seconds
@@ -267,10 +284,13 @@ def calc_outstanding_balance(begins: dict, closes: dict, rate: float, claimed: f
     return amount_due
 
 
-def calc_claimable_amount(amount_due: float, sender:str):
+def calc_claimable_amount(amount_due: float, sender:str) -> float:
     return amount_due if amount_due < balances[sender] else balances[sender]
 
 
-def construct_stream_permit_msg(sender:str, receiver:str, rate:float, begins:dict, closes:dict, deadline:dict):
+def construct_stream_permit_msg(sender:str, receiver:str, rate:float, begins:str, closes:str, deadline:str) -> str:
     return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{deadline}:{ctx.this}"
+
+def strptime_ymdhms(date_string: str) -> datetime.datetime:
+    return datetime.datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
