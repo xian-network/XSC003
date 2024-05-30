@@ -23,8 +23,13 @@ The provided methods facilitate the creation and management of payment streams w
     - forfeit a stream from a sender
 
 
+#### Note on time arguments (begins, closes, deadline, etc) :
+All time arguments must be in the format of `%Y-%m-%d %H:%M:%S`
+e.g `2023-01-01 10:00:00`
+
+
 ### Method: create_stream
-`create_stream(receiver: str, rate: float, begins: dict, closes: dict)`
+`create_stream(receiver: str, rate: float, begins: str, closes: str)`
 
 #### Overview
 The `create_stream` method facilitates the creation of a new payment stream from the sender to a receiver. This method allows for flexible scheduling of the stream, which can be set to start at any point in the past, present, or future.
@@ -40,7 +45,7 @@ This method performs the following operations to establish a new payment stream:
 This method simplifies the process of initiating a payment stream, making it accessible for users to set up scheduled payments to other parties within the smart contract environment.
 
 ### Method : create_stream_from_permit
-`create_stream_from_permit(sender: str, receiver: str, rate: float, begins: dict, closes: dict, deadline: str, signature: str)`
+`create_stream_from_permit(sender: str, receiver: str, rate: float, begins: str, closes: str, deadline: str, signature: str)`
 
 #### Overview
 The create_stream_from_permit method enables the creation of a payment stream based on a cryptographic permit, which includes a signature that must be verified before the stream can be established. This method allows for secure and verified transactions, ensuring that the stream is initiated based on pre-approved permissions.
@@ -85,7 +90,7 @@ This method ensures that payment streams are managed fairly and transparently, a
 
 ### Method : change_close_time
 
-`change_close_time(stream_id: str, new_close_time: dict)`
+`change_close_time(stream_id: str, new_close_time: str)`
 
 #### Overview
 The change_close_time method allows the sender of a payment stream to adjust the closing time of an active stream. This functionality is crucial for extending or shortening the duration of a payment stream based on new agreements or circumstances.
