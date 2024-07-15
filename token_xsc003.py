@@ -57,7 +57,7 @@ def transfer_from(amount: float, to: str, main_account: str):
     return f"Sent {amount} to {to} from {main_account}"
 
 
-@export
+@export 
 def balance_of(address: str):
     return balances[address]
 
@@ -81,7 +81,12 @@ def permit(owner: str, spender: str, value: float, deadline: str, signature: str
 
 
 def construct_permit_msg(owner: str, spender: str, value: float, deadline: str):
-    return f"{owner}:{spender}:{value}:{deadline}:{ctx.this}"
+    return f"{owner}:{spender}:{value}:{deadline}:{ctx.this}:{chain_id}"
+
+
+@export
+def test_chain_id():
+    return chain_id
 
 
 # XST003 / Streaming Payments
@@ -115,7 +120,7 @@ def create_stream(receiver: str, rate: float, begins: str, closes: str):
 # Internal function used to create a stream from a permit or from a direct call from the sender
 def perform_create_stream(sender: str, receiver: str, rate: float, begins: str, closes: str):
     stream_id = hashlib.sha3(f"{sender}:{receiver}:{begins}:{closes}:{rate}")
-
+    
     assert streams[stream_id, STATUS_KEY] is None, 'Stream already exists.'
     assert begins < closes, 'Stream cannot begin after the close date.'
     assert rate > 0, 'Rate must be greater than 0.'
@@ -289,7 +294,7 @@ def calc_claimable_amount(amount_due: float, sender:str) -> float:
 
 
 def construct_stream_permit_msg(sender:str, receiver:str, rate:float, begins:str, closes:str, deadline:str) -> str:
-    return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{deadline}:{ctx.this}"
+    return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{deadline}:{ctx.this}:{chain_id}"
 
 def strptime_ymdhms(date_string: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')

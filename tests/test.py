@@ -6,8 +6,14 @@ import datetime
 
 class TestCurrencyContract(unittest.TestCase):
     def setUp(self):
+
+        self.chain_id = "test-chain"
+        self.environment = {
+            "chain_id": self.chain_id
+        }
+
         # Called before every test, bootstraps the environment.
-        self.client = ContractingClient()
+        self.client = ContractingClient(environment=self.environment)
         self.client.flush()
 
         with open("token_xsc003.py") as f:
@@ -18,6 +24,9 @@ class TestCurrencyContract(unittest.TestCase):
 
     def tearDown(self):
         # Called after every test, ensures each test starts with a clean slate and is isolated from others
+        self.environment = {
+            "chain_id": self.chain_id
+        }
         self.client.flush()
 
     def test_balance_of(self):
@@ -100,7 +109,7 @@ class TestCurrencyContract(unittest.TestCase):
         self.currency.transfer(amount=100, to=spender, signer=funder)
 
     def construct_permit_msg(self, owner: str, spender: str, value: float, deadline: dict):
-        return f"{owner}:{spender}:{value}:{deadline}:currency"
+        return f"{owner}:{spender}:{value}:{deadline}:currency:{self.chain_id}"
 
     def create_deadline(self, minutes=1):
         d = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
@@ -182,7 +191,7 @@ class TestCurrencyContract(unittest.TestCase):
         return Datetime(d.year, d.month, d.day, hour=d.hour, minute=d.minute)
     
     def construct_stream_permit_msg(self, sender, receiver, rate, begins, closes, deadline):
-        return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{deadline}:currency"
+        return f"{sender}:{receiver}:{rate}:{begins}:{closes}:{deadline}:currency:{self.chain_id}"
 
     def test_create_stream_success(self):
         # GIVEN a valid stream creation setup
@@ -446,7 +455,7 @@ class TestCurrencyContract(unittest.TestCase):
         begins = Datetime(year=2023, month=1, day=1)
         closes = Datetime(year=2023, month=1, day=10)
         deadline = Datetime(year=2023, month=1, day=11)
-        env = {"now": Datetime(year=2023, month=1, day=3, hour=0)}
+        env = {"now": Datetime(year=2023, month=1, day=3, hour=0), "chain_id": self.chain_id}
         signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, begins, closes, deadline))
 
         # WHEN
@@ -472,7 +481,7 @@ class TestCurrencyContract(unittest.TestCase):
         deadline = Datetime(year=2023, month=1, day=11)
         signature = wallet.sign_msg(self.construct_stream_permit_msg(public_key, receiver, rate, str(begins), str(closes), str(deadline)))
         now = Datetime(year=2023, month=1, day=9)
-        env = {"now": now}
+        env = {"now": now, "chain_id": self.chain_id}
         # WHEN
         stream_id = self.currency.create_stream_from_permit(sender=public_key, receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), deadline=str(deadline), signature=signature, environment=env)
 
@@ -713,6 +722,12 @@ class TestCurrencyContract(unittest.TestCase):
         stream_status = self.currency.streams[stream_id, 'status']
         self.assertEqual(stream_status, 'finalized')
         self.assertEqual(self.currency.balances[receiver], (closes - begins).seconds * rate)
+
+    def test_chain_id(self):
+        # GIVEN a chain_id
+        chain_id = self.currency.test_chain_id()
+        # THEN the chain_id should be set correctly
+        self.assertEqual(chain_id, "test-chain")
 
 if __name__ == "__main__":
     unittest.main()
