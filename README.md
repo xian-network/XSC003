@@ -65,6 +65,13 @@ This method performs the following operations to establish a new payment stream 
 7. Return Value: 
     - Returns the unique stream ID generated during the stream creation process, providing a reference to the newly established stream.
 
+##### Constructing a Permit
+
+- A permit message must be constructed by the dapp for the user to sign using the xian wallet.
+- `{owner}:{spender}:{value}:{deadline}:{ctx.this}:{chain_id}`
+- The wallet will return a signature of this message for submission to `create_stream_from_permit`
+
+
 ### Method : balance_stream
 
 `balance_stream(stream_id: str)`
