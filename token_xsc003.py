@@ -84,11 +84,6 @@ def construct_permit_msg(owner: str, spender: str, value: float, deadline: str):
     return f"{owner}:{spender}:{value}:{deadline}:{ctx.this}:{chain_id}"
 
 
-@export
-def test_chain_id():
-    return chain_id
-
-
 # XST003 / Streaming Payments
 
 
