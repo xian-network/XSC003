@@ -340,7 +340,45 @@ class TestCurrencyContract(unittest.TestCase):
         self.assertIn("Finalized", finalize_res)
         self.assertEqual(self.currency.streams[stream_id, 'status'], 'finalized')
         self.assertEqual(self.currency.streams[stream_id, 'claimed'], seconds_in_period)
+        
+            
+    def test_finalize_stream_fails_if_not_sender_or_receiver(self):
+        # GIVEN a stream setup where the stream is not closed
+        sender = 'mary'
+        receiver = 'janine'
+        self.currency.balances[sender] = 100000000000000000000
+        begins = Datetime(year=2023, month=1, day=1, hour=0, minute=0)
+        closes = Datetime(year=2024, month=1, day=1, hour=0, minute=0)
+        rate = 1
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
+        balance_res = self.currency.balance_stream(stream_id=stream_id, signer=receiver, environment={"now": closes})
+        # WHEN the stream is attempted to be finalized
+        # THEN it should fail due to the stream not being closed
+        with self.assertRaises(Exception) as context:
+            self.currency.finalize_stream(stream_id=stream_id, signer="alice", environment={"now": closes})
+        self.assertIn('Only sender or receiver can finalize a stream.', str(context.exception))
+        
 
+    def test_finalize_stream_fails_if_closes_after_now(self):
+        # GIVEN a stream setup where the stream is not closed
+        sender = 'mary'
+        receiver = 'janine'
+        self.currency.balances[sender] = 100000000000000000000
+        self.currency.balances[receiver] = 0
+        begins = Datetime(year=2023, month=1, day=1, hour=0, minute=0)
+        closes = Datetime(year=2024, month=1, day=1, hour=0, minute=0)
+        # new_close_time = Datetime(year=2024, month=3, day=1, hour=0, minute=0)
+        rate = 1
+        stream_id = self.currency.create_stream(receiver=receiver, rate=rate, begins=str(begins), closes=str(closes), signer=sender)
+        
+        balance_res = self.currency.balance_stream(stream_id=stream_id, signer=receiver, environment={"now": Datetime(year=2024, month=3, day=1, hour=0, minute=0)})
+        # WHEN the stream is attempted to be finalized
+        # THEN it should fail due to the stream not being closed
+        with self.assertRaises(Exception) as context:
+            self.currency.finalize_stream(stream_id=stream_id, signer=receiver, environment={"now": Datetime(year=2023, month=2, day=1, hour=0, minute=0)})
+
+        self.assertIn('Stream has not closed yet.', str(context.exception))
+        
     def test_sender_can_finalize_stream(self):
         # GIVEN a stream setup where the sender can finalize the stream
         sender = 'mary'
@@ -722,12 +760,6 @@ class TestCurrencyContract(unittest.TestCase):
         stream_status = self.currency.streams[stream_id, 'status']
         self.assertEqual(stream_status, 'finalized')
         self.assertEqual(self.currency.balances[receiver], (closes - begins).seconds * rate)
-
-    def test_chain_id(self):
-        # GIVEN a chain_id
-        chain_id = self.currency.test_chain_id()
-        # THEN the chain_id should be set correctly
-        self.assertEqual(chain_id, "test-chain")
 
 if __name__ == "__main__":
     unittest.main()

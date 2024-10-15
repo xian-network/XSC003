@@ -38,7 +38,7 @@ def transfer(amount: float, to: str):
 
 @export
 def approve(amount: float, to: str):
-    assert amount > 0, 'Cannot send negative balances.'
+    assert amount >= 0, 'Cannot send negative balances.'
     balances[ctx.caller, to] += amount
 
     return f"Approved {amount} for {to}"
@@ -230,7 +230,7 @@ def finalize_stream(stream_id: str):
     rate = streams[stream_id, RATE_KEY]
     claimed = streams[stream_id, CLAIMED_KEY]
 
-    assert now <= closes, 'Stream has not closed yet.'
+    assert closes <= now, 'Stream has not closed yet.'
 
     outstanding_balance = calc_outstanding_balance(begins, closes, rate, claimed)
 
@@ -274,8 +274,6 @@ def forfeit_stream(stream_id: str) -> str:
 
 
 def calc_outstanding_balance(begins: str, closes: str, rate: float, claimed: float) -> float:
-    begins = begins
-    closes = closes
 
     claimable_end_point = now if now < closes else closes
     claimable_period = claimable_end_point - begins
